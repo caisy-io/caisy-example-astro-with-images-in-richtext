@@ -1,0 +1,53 @@
+---
+import RichTextRenderer from "@caisy/rich-text-astro-renderer";
+import { gql, GraphQLClient } from "graphql-request";
+import DocumentLink from "../../components/DocumentLink.astro";
+
+const params = Astro.params;
+
+const client = new GraphQLClient(
+  `https://cloud.caisy.io/api/v3/e/${import.meta.env.CAISY_PROJECT_ID}/graphql`,
+  {
+    headers: {
+      "x-caisy-apikey": import.meta.env.CAISY_API_KEY,
+    },
+  }
+);
+const gqlResponse: any = await client.request(
+  gql`
+    query allBlogArticle($slug: String) {
+      allBlogArticle(where: { slug: { eq: $slug } }) {
+        edges {
+          node {
+            text {
+              json
+              connections {
+                __typename
+                ... on Asset {
+                  id
+                  src
+                  width
+                  height
+				  description
+                }
+              }
+            }
+            title
+            slug
+            id
+          }
+        }
+      }
+    }
+  `,
+  { slug: params.slug }
+);
+
+const post = gqlResponse?.allBlogArticle?.edges?.[0]?.node;
+---
+<h1>{post.title}</h1>
+<RichTextRenderer
+  node={post.text.json}
+  connections={post?.text?.connections}
+  overwrites={{ documentLink: DocumentLink }}
+/>
